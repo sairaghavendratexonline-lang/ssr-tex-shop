@@ -1,9 +1,18 @@
 "use client";
 
 import useCartStore, { type CartItems } from "@/features/carts/useCartStore";
+import { readClientCartCookie } from "@/features/carts/read-client-cart-cookie";
+import {
+  clearAuthCartClearedMarker,
+  hasAuthCartClearedForUser,
+} from "@/features/carts/cart-cleared-marker";
+import { clearPersistedCartStorage } from "@/features/carts/clear-persisted-cart";
+import {
+  cartHasLines,
+  decideGuestCartMerge,
+} from "@/features/carts/guest-cart-merge";
 import { useToast } from "@/components/ui/use-toast";
-import { AuthUser, Session } from "@supabase/supabase-js";
-import { nanoid } from "nanoid";
+import type { AuthUser, Session, SupabaseClient } from "@supabase/supabase-js";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../lib/supabase/client";
@@ -29,6 +38,7 @@ interface SupabaseAuthProviderProps {
 }
 
 const WELCOME_TOAST_KEY = "auth:welcomed-user-id";
+const MERGED_GUEST_CART_KEY = "auth:merged-guest-cart-user-id";
 
 function hasWelcomedInSession(userId: string) {
   try {
@@ -54,6 +64,145 @@ function clearWelcomedInSession() {
   }
 }
 
+function markGuestCartMergedForUser(userId: string) {
+  try {
+    sessionStorage.setItem(MERGED_GUEST_CART_KEY, userId);
+  } catch {
+    // Ignore storage access failures (private mode/restrictions).
+  }
+}
+
+function clearMergedGuestCartMarker() {
+  try {
+    sessionStorage.removeItem(MERGED_GUEST_CART_KEY);
+  } catch {
+    // Ignore storage access failures (private mode/restrictions).
+  }
+}
+
+function dbRowsToCartItems(
+  rows: Array<{
+    product_id?: string | null;
+    quantity?: number | null;
+  }>,
+): CartItems {
+  const out: CartItems = {};
+  for (const row of rows) {
+    const productId = String(row.product_id ?? "").trim();
+    const quantity = Number(row.quantity ?? 0);
+    if (!productId || !Number.isFinite(quantity) || quantity <= 0) continue;
+    out[productId] = { quantity };
+  }
+  return out;
+}
+
+function applyDbCartToCookie(
+  dbRows: Array<{
+    product_id?: string | null;
+    quantity?: number | null;
+  }>,
+) {
+  const items = dbRowsToCartItems(dbRows);
+  if (Object.keys(items).length > 0) {
+    useCartStore.getState().replaceCart(items);
+    return;
+  }
+  useCartStore.getState().replaceCart({});
+  clearPersistedCartStorage();
+  useCartStore.getState().replaceCart({});
+}
+
+/** Add guest cookie quantities onto existing DB rows, then mirror the result. */
+async function mergeGuestCookieIntoDb(args: {
+  supabase: SupabaseClient;
+  userId: string;
+  existingRows: Array<{
+    product_id?: string | null;
+    quantity?: number | null;
+  }>;
+}) {
+  const cart = readClientCartCookie();
+  if (!cart || typeof cart !== "object") return;
+
+  const dbQtyByProduct = new Map<string, number>();
+  for (const row of args.existingRows) {
+    const productId = String(row.product_id ?? "").trim();
+    const quantity = Number(row.quantity ?? 0);
+    if (!productId || !Number.isFinite(quantity) || quantity <= 0) continue;
+    dbQtyByProduct.set(productId, quantity);
+  }
+
+  const upsertRows = Object.entries(cart)
+    .map(([productId, productValue]) => {
+      const guestQty = Number(productValue.quantity ?? 0);
+      if (!Number.isFinite(guestQty) || guestQty <= 0) return null;
+      const dbQty = dbQtyByProduct.get(productId) ?? 0;
+      return {
+        product_id: productId,
+        user_id: args.userId,
+        quantity: dbQty + guestQty,
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => row !== null);
+
+  if (upsertRows.length === 0) return;
+
+  await args.supabase.from("carts").upsert(upsertRows, {
+    onConflict: "user_id,product_id",
+  });
+
+  const finalCart = dbRowsToCartItems(args.existingRows);
+  for (const row of upsertRows) {
+    finalCart[row.product_id] = { quantity: row.quantity };
+  }
+
+  clearPersistedCartStorage();
+  useCartStore.getState().replaceCart(finalCart);
+}
+
+async function syncAuthCartOnAuthEvent(args: {
+  supabase: SupabaseClient;
+  userId: string;
+  authEvent: string;
+  sawLoggedOutInThisRuntime: boolean;
+}) {
+  const { data: dbRows, error: dbErr } = await args.supabase
+    .from("carts")
+    .select("product_id,quantity")
+    .eq("user_id", args.userId);
+
+  if (dbErr) {
+    markGuestCartMergedForUser(args.userId);
+    return;
+  }
+
+  const rows = dbRows ?? [];
+  const action = decideGuestCartMerge({
+    authEvent: args.authEvent,
+    sawLoggedOutInThisRuntime: args.sawLoggedOutInThisRuntime,
+    dbHasLines: rows.some((row) => Number(row.quantity ?? 0) > 0),
+    cookieHasLines: cartHasLines(readClientCartCookie()),
+    authCartCleared: hasAuthCartClearedForUser(args.userId),
+  });
+
+  markGuestCartMergedForUser(args.userId);
+
+  try {
+    if (action === "merge_cookie_to_db") {
+      await mergeGuestCookieIntoDb({
+        supabase: args.supabase,
+        userId: args.userId,
+        existingRows: rows,
+      });
+      return;
+    }
+
+    applyDbCartToCookie(rows);
+  } catch {
+    applyDbCartToCookie(rows);
+  }
+}
+
 export const SupabaseAuthProvider: React.FC<SupabaseAuthProviderProps> = ({
   children,
 }) => {
@@ -65,6 +214,7 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthProviderProps> = ({
   const { toast } = useToast();
   const router = useRouter();
   const lastWelcomedUserId = useRef<string | null>(null);
+  const sawLoggedOutInThisRuntimeRef = useRef(false);
 
   const loadWishlistForUser = (userId: string) => {
     const supabase = createClient();
@@ -108,21 +258,39 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthProviderProps> = ({
 
   useEffect(() => {
     let subscription: { unsubscribe: () => void } | null = null;
+    let cancelled = false;
 
     try {
       const supabase = createClient();
+
+      void supabase.auth.getSession().then(({ data }) => {
+        if (cancelled) return;
+        setSession(data.session ?? null);
+        if (data.session?.user) {
+          setUser(data.session.user);
+        }
+      });
+
       const authChange = supabase.auth.onAuthStateChange((_event, session) => {
         setSession(session);
 
         switch (_event) {
           case "INITIAL_SESSION":
-            supabase.auth.getUser().then(({ data }) => {
+            supabase.auth.getUser().then(async ({ data }) => {
+              if (cancelled) return;
               setUser(data.user);
-              if (data.user?.id) {
-                void syncLocalWishlistToAccount(data.user.id);
-              } else {
-                // Stay on device-local wishlist when signed out.
+              if (!data.user?.id) {
+                sawLoggedOutInThisRuntimeRef.current = true;
+                return;
               }
+
+              void syncLocalWishlistToAccount(data.user.id);
+              await syncAuthCartOnAuthEvent({
+                supabase,
+                userId: data.user.id,
+                authEvent: "INITIAL_SESSION",
+                sawLoggedOutInThisRuntime: sawLoggedOutInThisRuntimeRef.current,
+              });
             });
             break;
           case "PASSWORD_RECOVERY":
@@ -141,31 +309,17 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthProviderProps> = ({
             supabase.auth.getUser().then(({ data }) => {
               setUser(data.user);
 
-              if (!data.user) return;
-
-              try {
-                const raw = localStorage.getItem("cart");
-                if (raw) {
-                  const parsed = JSON.parse(raw) as { cart?: CartItems };
-                  const cart = parsed?.cart;
-                  if (cart && typeof cart === "object") {
-                    const storageCarts = Object.entries(cart).map(
-                      ([productId, productValue]) => ({
-                        id: nanoid(),
-                        productId,
-                        quantity: productValue.quantity,
-                        userId: data.user!.id,
-                      }),
-                    );
-
-                    if (storageCarts.length > 0) {
-                      supabase.from("carts").insert(storageCarts);
-                    }
-                  }
-                }
-              } catch {
-                // Ignore invalid guest cart payload in localStorage.
+              if (!data.user) {
+                sawLoggedOutInThisRuntimeRef.current = true;
+                return;
               }
+
+              void syncAuthCartOnAuthEvent({
+                supabase,
+                userId: data.user.id,
+                authEvent: "SIGNED_IN",
+                sawLoggedOutInThisRuntime: sawLoggedOutInThisRuntimeRef.current,
+              });
             });
 
             if (session?.user?.id) {
@@ -188,8 +342,12 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthProviderProps> = ({
           case "SIGNED_OUT":
             setUser(null);
             lastWelcomedUserId.current = null;
+            sawLoggedOutInThisRuntimeRef.current = true;
             clearWelcomedInSession();
+            clearMergedGuestCartMarker();
+            clearAuthCartClearedMarker();
             removeAllCartStorage();
+            clearPersistedCartStorage();
             clearWishlist();
             break;
 
@@ -210,7 +368,10 @@ export const SupabaseAuthProvider: React.FC<SupabaseAuthProviderProps> = ({
       setSession(null);
     }
 
-    return () => subscription?.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription?.unsubscribe();
+    };
   }, [clearWishlist, removeAllCartStorage, router, setWishlist, toast]);
 
   return (

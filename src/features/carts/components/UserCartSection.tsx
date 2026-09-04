@@ -39,6 +39,8 @@ import BulkOrderGuardDialog from "./BulkOrderGuardDialog";
 import EmptyCart from "@/features/carts/components/EmptyCart";
 import { RemoveCartsMutation, updateCartsMutation } from "../query";
 import useCartStore, { CartItems } from "../useCartStore";
+import { markAuthCartCleared } from "../cart-cleared-marker";
+import { clearPersistedCartStorage } from "../clear-persisted-cart";
 import {
   calcLiveCartSubtotal,
   useCartLivePricing,
@@ -101,6 +103,7 @@ function UserCartSection({
   const [, removeCart] = useMutation(RemoveCartsMutation);
   const localCart = useCartStore((s) => s.cart);
   const setProductSize = useCartStore((s) => s.setProductSize);
+  const replaceCart = useCartStore((s) => s.replaceCart);
   const [sizeConfigsByProductId, setSizeConfigsByProductId] = useState<
     Record<string, CartSizeConfig>
   >(() => initialSizeConfigs ?? {});
@@ -394,6 +397,14 @@ function UserCartSection({
         description: expectedErrorsHandler({ error: res.error }),
       });
     } else {
+      const remaining = { ...useCartStore.getState().cart };
+      delete remaining[productId];
+      if (Object.keys(remaining).length === 0) {
+        markAuthCartCleared(user.id);
+        replaceCart({});
+        clearPersistedCartStorage();
+        replaceCart({});
+      }
       toast({ title: "Removed a Product." });
       reexecuteQuery({ requestPolicy: "network-only" });
     }
