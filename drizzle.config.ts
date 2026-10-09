@@ -1,17 +1,15 @@
-import type { Config } from "drizzle-kit";
+import { defineConfig } from "drizzle-kit";
 import * as dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 dotenv.config();
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL is missing");
-}
+// `generate` only reads the schema, so credentials are optional here;
+// commands that talk to the database (push/pull/studio) still need DATABASE_URL.
+const databaseUrl = process.env.DATABASE_URL;
 
-export default {
+export default defineConfig({
   schema: "./src/lib/supabase/schema.ts",
   out: "./drizzle",
-  driver: "pg",
-  dbCredentials: {
-    connectionString: process.env.DATABASE_URL,
-  },
-} satisfies Config;
+  dialect: "postgresql",
+  ...(databaseUrl ? { dbCredentials: { url: databaseUrl } } : {}),
+});

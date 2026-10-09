@@ -1,0 +1,13 @@
+{
+  "version": "6",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1791548783304,
+      "tag": "0000_vengeful_donald_blake",
+      "breakpoints": true
+    }
+  ]
+}
