@@ -1,11 +1,10 @@
-import { CartSheet } from "@/features/carts";
 import MainFooter from "@/components/layouts/MainFooter";
 import { MobileMenuProvider } from "@/components/layouts/MobileMenuContext";
 import { MobileSearchProvider } from "@/components/layouts/MobileSearchContext";
 import { MobileSearchOverlay } from "@/components/layouts/MobileSearchOverlay";
 import Navbar from "@/components/layouts/MainNavbar";
 import { StoreHeaderMetrics } from "@/components/layouts/StoreHeaderMetrics";
-import { StoreFloatingActions } from "@/components/layouts/StoreFloatingActions";
+import { StoreDeferredChrome } from "@/components/layouts/StoreDeferredChrome";
 import { MobileBottomNav } from "@/components/layouts/MobileBottomNav";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { resolveStorefrontRuntimeBundle } from "@/lib/integrations/settings";
@@ -64,8 +63,7 @@ async function StoreLayout({ children }: Props) {
                       <main className="w-full max-w-[100vw] overflow-x-hidden pt-[var(--store-header-offset-mobile)] md:pt-[var(--store-header-offset-desktop)] pb-[var(--mobile-nav-height)] md:pb-0">
                         {children}
                       </main>
-                      <CartSheet />
-                      <StoreFloatingActions />
+                      <StoreDeferredChrome />
                       <MobileBottomNav />
                       <div className="md:contents pb-[var(--mobile-nav-height)] md:pb-0">
                         <MainFooter />

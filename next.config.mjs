@@ -127,6 +127,7 @@ const nextConfig = {
       dynamic: 0,
       static: 180,
     },
+    optimizePackageImports: ["lucide-react", "framer-motion", "date-fns"],
   },
 }
 

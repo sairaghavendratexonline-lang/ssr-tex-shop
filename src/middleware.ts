@@ -96,7 +96,9 @@ function redirectToCanonicalHost(request: NextRequest): NextResponse | null {
   const redirect = new URL(request.url);
   redirect.protocol = canonical.protocol;
   redirect.host = canonicalHost;
-  return NextResponse.redirect(redirect, 308);
+  // 307, not 308: browsers cache permanent redirects, which pins visitors to an
+  // old host after a hosting or SITE_URL change.
+  return NextResponse.redirect(redirect, 307);
 }
 
 export async function middleware(request: NextRequest) {

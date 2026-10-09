@@ -3,7 +3,10 @@ import {
   deleteCategoryProductsBatch,
   deleteOrArchiveProducts,
 } from "@/lib/admin/product-lifecycle";
-import { invalidateStorefrontCache } from "@/lib/cache/invalidate-storefront";
+import {
+  invalidateStorefrontCache,
+  invalidateStorefrontCollectionsCache,
+} from "@/lib/cache/invalidate-storefront";
 import {
   getProductSizeConfigsByProductIds,
   normalizeProductSizeConfig,
@@ -220,12 +223,22 @@ async function buildUniqueCollectionSlug(name: string, excludeId?: string) {
   }
 }
 
-async function revalidateCollectionPages() {
+/**
+ * Category writes bust only collection/landing/product-list caches. Deletes also
+ * remove products, so they need the full storefront bust.
+ */
+async function revalidateCollectionPages(
+  options: { productsRemoved?: boolean } = {},
+) {
   revalidatePath("/collections");
   revalidatePath("/collections", "layout");
   revalidatePath("/shop");
   revalidatePath("/admin/collections");
-  await invalidateStorefrontCache();
+  if (options.productsRemoved) {
+    await invalidateStorefrontCache();
+  } else {
+    await invalidateStorefrontCollectionsCache();
+  }
 }
 
 /** Prefer newest product photo in the category when no category image is set. */
@@ -1248,7 +1261,7 @@ async function handleDeleteCollection(
     }
 
     if (outcome.done) {
-      await revalidateCollectionPages();
+      await revalidateCollectionPages({ productsRemoved: true });
     }
 
     return {

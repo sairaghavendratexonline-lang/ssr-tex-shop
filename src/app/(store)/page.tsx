@@ -1,13 +1,9 @@
 import { Shell } from "@/components/layouts/Shell";
 import { Icons } from "@/components/layouts/icons";
-import {
-  HomeHeroCarousel,
-  HomeCategoriesCarousel,
-  HomePriceCarousel,
-  HomeTestimonialsCarousel,
-  HomeShoppableReels,
-  HomeExploreLinks,
-} from "@/features/storefront/components";
+import { HomeHeroCarousel } from "@/features/storefront/components/HomeHeroCarousel";
+import { HomeCategoriesCarousel } from "@/features/storefront/components/HomeCategoriesCarousel";
+import { HomeExploreLinks } from "@/features/storefront/components/HomeExploreLinks";
+import dynamic from "next/dynamic";
 import { heroSlides } from "@/config/heroSlides";
 import { getHomeBannerSlides } from "@/lib/integrations/settings";
 import { withTimeoutFallback } from "@/lib/resilience";
@@ -17,6 +13,23 @@ import { getShopByPriceBucketsCached } from "@/lib/storefront/shop-by-price";
 import { resolveStorefrontContact } from "@/lib/integrations/settings";
 import { STOREFRONT_REVALIDATE_SECONDS } from "@/lib/cache/constants";
 import type { Metadata } from "next";
+
+// Below-the-fold sections (framer-motion heavy) load as separate chunks.
+const HomePriceCarousel = dynamic(() =>
+  import("@/features/storefront/components/HomePriceCarousel").then(
+    (mod) => mod.HomePriceCarousel,
+  ),
+);
+const HomeShoppableReels = dynamic(() =>
+  import("@/features/storefront/components/HomeShoppableReels").then(
+    (mod) => mod.HomeShoppableReels,
+  ),
+);
+const HomeTestimonialsCarousel = dynamic(() =>
+  import("@/features/storefront/components/HomeTestimonialsCarousel").then(
+    (mod) => mod.HomeTestimonialsCarousel,
+  ),
+);
 
 export const revalidate = STOREFRONT_REVALIDATE_SECONDS;
 
