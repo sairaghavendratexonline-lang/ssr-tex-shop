@@ -7,7 +7,6 @@ import {
   getBulkDraftIdempotentResponse,
   saveBulkDraftIdempotentResponse,
 } from "@/lib/admin/bulk-draft-idempotency";
-import { invalidateStorefrontCache } from "@/lib/cache/invalidate-storefront";
 import { parseBulkSharedInput } from "@/lib/admin/normalize-bulk-product-shared";
 import { getSessionUser, isAdminUser } from "@/lib/auth/admin";
 import { processUploadedImage } from "@/lib/image/processUpload";
@@ -226,8 +225,6 @@ export async function POST(request: NextRequest) {
         uploadedMedias,
         shared,
       );
-
-      await invalidateStorefrontCache();
 
       const responseBody = {
         message:

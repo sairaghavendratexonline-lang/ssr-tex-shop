@@ -4,6 +4,7 @@ import {
   classifyAuthCookieState,
   clearSupabaseAuthCookiesOnResponse,
 } from "@/lib/auth/middleware-session-cookie";
+import { getLocallyVerifiedUser } from "@/lib/auth/local-jwt";
 import { getCanonicalSiteOrigin } from "@/lib/auth/site-urls";
 import {
   checkAuthRateLimit,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/auth/rate-limit";
 
 const AUTH_GET_USER_TIMEOUT_MS = 5000;
+const SESSION_REFRESH_WINDOW_SECONDS = 120;
 
 function redirectToAdminSignIn(
   request: NextRequest,
@@ -166,6 +168,16 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!needsSessionRefresh) {
+    return NextResponse.next({
+      request: { headers: request.headers },
+    });
+  }
+
+  // Valid, not-about-to-expire token: no refresh needed, skip /auth/v1/user.
+  const localUser = await getLocallyVerifiedUser(request.cookies.getAll(), {
+    minTtlSeconds: SESSION_REFRESH_WINDOW_SECONDS,
+  });
+  if (localUser) {
     return NextResponse.next({
       request: { headers: request.headers },
     });

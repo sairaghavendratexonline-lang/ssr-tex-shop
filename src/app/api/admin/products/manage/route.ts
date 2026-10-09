@@ -1,7 +1,10 @@
 import { deleteOrArchiveProducts } from "@/lib/admin/product-lifecycle";
 import { publicValidationPayload } from "@/lib/api/public-error";
 import { getSessionUser, isAdminUser } from "@/lib/auth/admin";
-import { invalidateStorefrontCache } from "@/lib/cache/invalidate-storefront";
+import {
+  invalidateProductCaches,
+  loadProductCacheIdentities,
+} from "@/lib/cache/invalidate-storefront";
 import {
   revalidateAfterCatalogBulkChange,
   revalidateAfterProductMutation,
@@ -28,6 +31,15 @@ async function ensureAdmin() {
   return user;
 }
 
+async function loadPreviousIdentities(productIds: string[]) {
+  try {
+    return await loadProductCacheIdentities(productIds);
+  } catch (error) {
+    console.warn("[products/manage] previous identity lookup failed:", error);
+    return [];
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   const user = await ensureAdmin();
   if (!user) {
@@ -44,9 +56,10 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
+  const previous = await loadPreviousIdentities(parsed.data.ids);
   const outcome = await deleteOrArchiveProducts(parsed.data.ids);
   revalidateAfterCatalogBulkChange();
-  await invalidateStorefrontCache();
+  await invalidateProductCaches({ productIds: parsed.data.ids, previous });
 
   return NextResponse.json(outcome);
 }
@@ -105,7 +118,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   revalidateAfterProductMutation({ slug: updated.slug });
-  await invalidateStorefrontCache();
+  await invalidateProductCaches({ productIds: [updated.id] });
 
   return NextResponse.json({ ok: true, product: updated });
 }

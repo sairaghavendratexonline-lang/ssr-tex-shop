@@ -1,19 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { fetchWithTimeout } from "@/lib/network/fetchWithTimeout";
+import {
+  loadSizePreview,
+  readCachedSizePreview,
+  type SizePreviewConfig,
+  type SizePreviewOption,
+} from "@/features/products/size-preview-batch";
 
-type SizeOption = {
-  size: string;
-  qty: number;
-};
-
-type SizeConfigResponse = {
-  enabled: boolean;
-  options: SizeOption[];
-};
-
-function formatSizeLabel(option: SizeOption) {
+function formatSizeLabel(option: SizePreviewOption) {
   const size = String(option.size ?? "")
     .trim()
     .toUpperCase();
@@ -28,25 +23,15 @@ export default function ProductSizePreview({
 }: {
   productId: string;
 }) {
-  const [data, setData] = useState<SizeConfigResponse | null>(null);
+  const [data, setData] = useState<SizePreviewConfig | null>(
+    () => readCachedSizePreview(productId) ?? null,
+  );
 
   useEffect(() => {
     let mounted = true;
-    const load = async () => {
-      try {
-        const res = await fetchWithTimeout(
-          `/api/products/size-config?productId=${encodeURIComponent(productId)}`,
-          { cache: "no-store" },
-        );
-        if (!res.ok) return;
-        const payload = (await res.json()) as SizeConfigResponse;
-        if (!mounted) return;
-        setData(payload);
-      } catch {
-        // Size preview should not break product card UI.
-      }
-    };
-    void load();
+    void loadSizePreview(productId).then((config) => {
+      if (mounted) setData(config);
+    });
     return () => {
       mounted = false;
     };

@@ -1,7 +1,8 @@
 "use client";
 import { SearchQuery } from "@/features/search";
 import { cn, formatPrice } from "@/lib/utils";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useListingFilterNavigation } from "./ListingFilterNavigation";
 import { Icons } from "@/components/layouts/icons";
 import { Badge } from "@/components/ui/badge";
 
@@ -17,7 +18,7 @@ function FilterBadges({
   onDeleteHandler,
 }: FilterBadgesProps) {
   const pathname = usePathname();
-  const router = useRouter();
+  const { pushListingFilters } = useListingFilterNavigation();
 
   return (
     <section className="gap-x-10 md:flex hidden">
@@ -26,7 +27,7 @@ function FilterBadges({
           {`Search: ${query.search}`}
           <button
             onClick={() =>
-              router.push(pathname + "?" + onDeleteHandler("search"))
+              pushListingFilters(pathname + "?" + onDeleteHandler("search"))
             }
             className={cn("rounded-full")}
           >
@@ -39,7 +40,7 @@ function FilterBadges({
           {`Price: ${formatPrice(query.priceRange[0])} – ${formatPrice(query.priceRange[1])}`}
           <button
             onClick={() =>
-              router.push(pathname + "?" + onDeleteHandler("price_range"))
+              pushListingFilters(pathname + "?" + onDeleteHandler("price_range"))
             }
             className={cn("rounded-full")}
           >
@@ -58,7 +59,7 @@ function FilterBadges({
                   const deletedcollections = query.collections.filter(
                     (c) => c !== collection.id,
                   );
-                  router.push(
+                  pushListingFilters(
                     pathname +
                       "?" +
                       onDeleteHandler(

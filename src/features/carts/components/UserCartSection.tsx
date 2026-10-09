@@ -87,7 +87,8 @@ function UserCartSection({
     variables: {
       userId: user.id,
     },
-    requestPolicy: "network-only",
+    // Prefer SSR / cache on first paint; mutations below still force network-only.
+    requestPolicy: initialCart ? "cache-first" : "cache-and-network",
   });
 
   const cartData = data ?? initialCart ?? null;

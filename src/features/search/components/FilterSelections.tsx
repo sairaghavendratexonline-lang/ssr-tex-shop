@@ -17,7 +17,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useListingFilterNavigation } from "./ListingFilterNavigation";
 
 import { Icons } from "@/components/layouts/icons";
 import PriceRange from "@/components/ui/PriceRange";
@@ -35,7 +36,7 @@ type Props = {
 };
 
 function FilterSelections({ collectionsSection, shopLayout = true }: Props) {
-  const router = useRouter();
+  const { pushListingFilters } = useListingFilterNavigation();
   const pathname = usePathname();
   const [isPending, startTransition] = React.useTransition();
 
@@ -110,7 +111,7 @@ function FilterSelections({ collectionsSection, shopLayout = true }: Props) {
     if (searchParams.get("price_range") === nextRange) return;
 
     startTransition(() => {
-      router.push(`${pathname}?${createQueryString("price_range", nextRange)}`);
+      pushListingFilters(`${pathname}?${createQueryString("price_range", nextRange)}`);
     });
   }, [
     createQueryString,
@@ -118,7 +119,7 @@ function FilterSelections({ collectionsSection, shopLayout = true }: Props) {
     pathname,
     priceFilterTouched,
     query.priceRange,
-    router,
+    pushListingFilters,
     searchParams,
   ]);
 
@@ -128,7 +129,7 @@ function FilterSelections({ collectionsSection, shopLayout = true }: Props) {
     if (oldValue.includes(collectionId)) {
       const collections = oldValue.filter((item) => item !== collectionId);
       setQuery({ ...query, collections });
-      router.push(
+      pushListingFilters(
         pathname +
           "?" +
           createQueryString("collections", JSON.stringify(collections)),
@@ -136,7 +137,7 @@ function FilterSelections({ collectionsSection, shopLayout = true }: Props) {
     } else {
       const collections = [...oldValue, collectionId];
       setQuery({ ...query, collections });
-      router.push(
+      pushListingFilters(
         pathname +
           "?" +
           removeQueryString(
@@ -212,7 +213,7 @@ function FilterSelections({ collectionsSection, shopLayout = true }: Props) {
             disabled={isLoading}
             onValueChange={(sort) => {
               setQuery({ ...query, sort: SortEnum[sort] });
-              router.push(`${pathname}?${createQueryString("sort", sort)}`);
+              pushListingFilters(`${pathname}?${createQueryString("sort", sort)}`);
             }}
             items={Object.entries(SortEnum).map(([key, value]) => ({
               value: key,
@@ -272,7 +273,7 @@ function FilterSelections({ collectionsSection, shopLayout = true }: Props) {
                   onReset={() => {
                     touchPriceFilter();
                     setQuery({ ...query, priceRange: undefined });
-                    router.push(
+                    pushListingFilters(
                       pathname + "?" + removeQueryString("price_range"),
                     );
                   }}
@@ -288,7 +289,7 @@ function FilterSelections({ collectionsSection, shopLayout = true }: Props) {
                 disabled={isLoading}
                 onValueChange={(sort) => {
                   setQuery({ ...query, sort: SortEnum[sort] });
-                  router.push(`${pathname}?${createQueryString("sort", sort)}`);
+                  pushListingFilters(`${pathname}?${createQueryString("sort", sort)}`);
                 }}
                 defaultValue={query.sort}
                 items={Object.entries(SortEnum).map(([key, value]) => ({

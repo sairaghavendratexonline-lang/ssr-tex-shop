@@ -15,7 +15,6 @@ export type WishlistProductView = DocumentType<typeof ProductCardFragment> & {
 function toCardProduct(row: {
   id: string;
   name: string;
-  description: string | null;
   rating: string | number;
   slug: string;
   badge: string | null;
@@ -31,7 +30,6 @@ function toCardProduct(row: {
   return {
     id: row.id,
     name: row.name,
-    description: row.description,
     rating: Number(row.rating),
     slug: row.slug,
     badge: row.badge as WishlistProductView["badge"],
@@ -60,7 +58,6 @@ export async function getPublishedWishlistProductsByIds(
     .select({
       id: products.id,
       name: products.name,
-      description: products.description,
       rating: products.rating,
       slug: products.slug,
       badge: products.badge,
@@ -99,7 +96,6 @@ export async function getWishlistProductsForUser(
     .select({
       id: products.id,
       name: products.name,
-      description: products.description,
       rating: products.rating,
       slug: products.slug,
       badge: products.badge,

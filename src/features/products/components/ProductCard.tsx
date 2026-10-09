@@ -8,7 +8,6 @@ import { productThumbnailImageHoverClass } from "@/features/products/productThum
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -38,7 +37,6 @@ export const ProductCardFragment = gql(/* GraphQL */ `
   fragment ProductCardFragment on products {
     id
     name
-    description
     rating
     slug
     badge
@@ -101,12 +99,6 @@ export function ProductCard({
             {name}
           </Link>
         </CardTitle>
-
-        <div className="hidden md:block">
-          <CardDescription className="max-w-[240px] line-clamp-2">
-            {product.description}
-          </CardDescription>
-        </div>
 
         <ProductPriceDisplay product={product} />
         <LowStockNotice stock={stock} />

@@ -1,31 +1,93 @@
-import type {
-  ProductDetailPageQueryQuery,
-  ProductDetailPageQueryQueryVariables,
-} from "@/gql/graphql";
-import { getClient } from "@/lib/urql";
-import { CACHE_TAGS } from "@/lib/cache/constants";
+import { cache } from "react";
+import { CACHE_TAGS, productDetailCacheTag } from "@/lib/cache/constants";
 import { withStorefrontCache } from "@/lib/cache/storefront-cache";
+import {
+  fetchD1Collections,
+  fetchD1FeaturedProducts,
+  fetchD1ProductBySlug,
+  isCatalogD1Enabled,
+} from "@/lib/catalog/d1-mirror";
+import { mapD1ProductToDetailPage } from "@/lib/catalog/d1-product-card";
+import {
+  filterDraftEdges,
+  getDraftProductIdSet,
+} from "@/lib/storefront/filter-draft-products";
+import {
+  loadProductDetailPageFromDb,
+  type ProductDetailPageData,
+} from "@/lib/storefront/product-detail-drizzle.server";
 import { isProductSlugPublished } from "@/lib/storefront/product-visibility";
-import { ProductDetailPageQueryDocument } from "./documents";
 
-export async function getProductDetailCached(productSlug: string) {
+async function isProductSlugPublishedCached(slug: string): Promise<boolean> {
   return withStorefrontCache(
-    `sf:product:${productSlug}`,
-    async () => {
-      const { data, error } = await getClient().query<
-        ProductDetailPageQueryQuery,
-        ProductDetailPageQueryQueryVariables
-      >(ProductDetailPageQueryDocument, { productSlug });
-      if (error) throw error;
-      return data;
+    `sf:published:${slug}`,
+    () => isProductSlugPublished(slug),
+    {
+      revalidate: 60,
+      tags: [CACHE_TAGS.productDetails, productDetailCacheTag(slug)],
     },
-    { tags: [CACHE_TAGS.products, CACHE_TAGS.drafts] },
   );
 }
 
-/** Returns null when the slug is draft or missing — always checks live DB first. */
-export async function getPublishedProductDetailCached(productSlug: string) {
-  const published = await isProductSlugPublished(productSlug);
-  if (!published) return null;
-  return getProductDetailCached(productSlug);
+async function loadProductDetailFromD1(
+  productSlug: string,
+): Promise<ProductDetailPageData | null> {
+  const [{ product, gallery }, collections, recommendations] =
+    await Promise.all([
+      fetchD1ProductBySlug(productSlug),
+      fetchD1Collections(),
+      fetchD1FeaturedProducts(5),
+    ]);
+  if (!product || Number(product.is_draft) === 1) return null;
+  return mapD1ProductToDetailPage(
+    product,
+    gallery,
+    collections,
+    recommendations,
+  );
 }
+
+const EMPTY_DETAIL = {
+  productsCollection: { edges: [] },
+  recommendations: { edges: [] },
+} as unknown as ProductDetailPageData;
+
+export async function getProductDetailCached(productSlug: string) {
+  const data = await withStorefrontCache(
+    `sf:product:${productSlug}`,
+    async () => {
+      if (isCatalogD1Enabled()) {
+        try {
+          const fromD1 = await loadProductDetailFromD1(productSlug);
+          if (fromD1) return fromD1;
+        } catch (error) {
+          console.warn(
+            "[catalog-d1] pdp fallback to supabase:",
+            error instanceof Error ? error.message : error,
+          );
+        }
+      }
+      return (await loadProductDetailPageFromDb(productSlug)) ?? EMPTY_DETAIL;
+    },
+    {
+      tags: [CACHE_TAGS.productDetails, productDetailCacheTag(productSlug)],
+    },
+  );
+
+  if (!data?.recommendations?.edges?.length) return data;
+
+  const draftIds = await getDraftProductIdSet();
+  return {
+    ...data,
+    recommendations: filterDraftEdges(data.recommendations, draftIds),
+  };
+}
+
+/** Returns null when the slug is draft or missing (published check cached 60s). */
+export const getPublishedProductDetailCached = cache(
+  async (productSlug: string) => {
+    const published = await isProductSlugPublishedCached(productSlug);
+    if (!published) return null;
+    return getProductDetailCached(productSlug);
+  },
+);

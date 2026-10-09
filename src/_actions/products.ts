@@ -3,7 +3,10 @@
 import db from "@/lib/supabase/db";
 import { products } from "@/lib/supabase/schema";
 import { requireAdminActionUser } from "@/lib/auth/require-admin";
-import { invalidateStorefrontCache } from "@/lib/cache/invalidate-storefront";
+import {
+  invalidateProductCaches,
+  loadProductCacheIdentities,
+} from "@/lib/cache/invalidate-storefront";
 import { revalidateAfterProductMutation } from "@/lib/cache/revalidate-product-catalog";
 import {
   buildBulkProductInsertValues,
@@ -20,11 +23,22 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 
 export type { ProductImageOptions };
 
-async function softInvalidateStorefrontCache() {
+async function softInvalidateProductCaches(
+  params: Parameters<typeof invalidateProductCaches>[0],
+) {
   try {
-    await invalidateStorefrontCache();
+    await invalidateProductCaches(params);
   } catch (error) {
-    console.error("[products] invalidateStorefrontCache failed:", error);
+    console.error("[products] invalidateProductCaches failed:", error);
+  }
+}
+
+async function loadPreviousIdentities(productIds: string[]) {
+  try {
+    return await loadProductCacheIdentities(productIds);
+  } catch (error) {
+    console.warn("[products] previous identity lookup failed:", error);
+    return [];
   }
 }
 
@@ -35,7 +49,7 @@ export const createProductAction = async (
   await requireAdminActionUser();
   const created = await createProductRecord(product, options);
   revalidateAfterProductMutation({ slug: created.slug });
-  void softInvalidateStorefrontCache();
+  await softInvalidateProductCaches({ productIds: [String(created.id)] });
   return [created];
 };
 
@@ -45,9 +59,10 @@ export const updateProductAction = async (
   options?: ProductImageOptions,
 ) => {
   await requireAdminActionUser();
+  const previous = await loadPreviousIdentities([productId]);
   const updated = await updateProductRecord(productId, product, options);
   revalidateAfterProductMutation({ slug: updated.slug });
-  void softInvalidateStorefrontCache();
+  await softInvalidateProductCaches({ productIds: [productId], previous });
   return [updated];
 };
 
@@ -161,7 +176,9 @@ export async function createDraftProductsFromMedia(
     }
 
     revalidateAfterProductMutation();
-    await invalidateStorefrontCache();
+    await softInvalidateProductCaches({
+      productIds: createdProducts.map((row) => row.id),
+    });
     return createdProducts;
   } catch (error) {
     throw mapProductSaveError(error);

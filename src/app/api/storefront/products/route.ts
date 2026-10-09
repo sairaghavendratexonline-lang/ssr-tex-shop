@@ -8,14 +8,17 @@ import {
   parseProductListRequest,
   type StorefrontProductSearchVariables,
 } from "@/lib/storefront/search-params";
-import { STOREFRONT_REVALIDATE_SECONDS } from "@/lib/cache/constants";
+import {
+  STOREFRONT_DATA_REVALIDATE_SECONDS,
+  STOREFRONT_REVALIDATE_SECONDS,
+} from "@/lib/cache/constants";
 import type { SearchQueryVariables } from "@/gql/graphql";
 import { NextRequest, NextResponse } from "next/server";
 
 export const revalidate = STOREFRONT_REVALIDATE_SECONDS;
 
 const CACHE_HEADERS = {
-  "Cache-Control": `public, s-maxage=${STOREFRONT_REVALIDATE_SECONDS}, stale-while-revalidate=300`,
+  "Cache-Control": `public, s-maxage=${STOREFRONT_REVALIDATE_SECONDS}, stale-while-revalidate=${STOREFRONT_DATA_REVALIDATE_SECONDS}`,
 };
 
 export async function GET(request: NextRequest) {

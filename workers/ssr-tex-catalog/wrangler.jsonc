@@ -1,0 +1,21 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "ssr-tex-catalog",
+  "account_id": "a6b9847a4bbc0ac1cf3c406815175d58",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-14",
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "triggers": {
+    "crons": ["*/30 * * * *"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ssr-tex-catalog",
+      "database_id": "REPLACE_AFTER_d1_create"
+    }
+  ]
+}

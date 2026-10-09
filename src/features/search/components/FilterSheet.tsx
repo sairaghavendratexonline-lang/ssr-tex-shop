@@ -8,7 +8,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { SelectCollection } from "@/lib/supabase/schema";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useListingFilterNavigation } from "./ListingFilterNavigation";
 import React from "react";
 import { Button } from "../../../components/ui/button";
 import { Separator } from "../../../components/ui/separator";
@@ -16,7 +17,7 @@ import { Separator } from "../../../components/ui/separator";
 type Props = { collections: SelectCollection[] };
 
 function FilterSheet({ collections }: Props) {
-  const router = useRouter();
+  const { pushListingFilters } = useListingFilterNavigation();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = React.useTransition();
@@ -118,7 +119,7 @@ function FilterSheet({ collections }: Props) {
                     size="sm"
                     onClick={() => {
                       startTransition(() => {
-                        router.push(
+                        pushListingFilters(
                           `${pathname}?${createQueryString({
                             store_page: Number(store_page) - 1,
                           })}`
@@ -135,7 +136,7 @@ function FilterSheet({ collections }: Props) {
                     size="sm"
                     onClick={() => {
                       startTransition(() => {
-                        router.push(
+                        pushListingFilters(
                           `${pathname}?${createQueryString({
                             store_page: Number(store_page) + 1,
                           })}`
@@ -194,7 +195,7 @@ function FilterSheet({ collections }: Props) {
               className="w-full"
               onClick={() => {
                 startTransition(() => {
-                  router.push(
+                  pushListingFilters(
                     `${pathname}?${createQueryString({
                       price_range: 0 - 100,
                       store_ids: null,

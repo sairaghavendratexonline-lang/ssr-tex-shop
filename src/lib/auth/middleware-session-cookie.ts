@@ -12,8 +12,10 @@ function isSupabaseAuthCookieName(cookie: { name: string }): boolean {
   return cookie.name.startsWith("sb-") && cookie.name.includes("-auth-token");
 }
 
-function getSupabaseAuthCookieValue(request: NextRequest): string | null {
-  const cookies = request.cookies.getAll().filter(isSupabaseAuthCookieName);
+type CookieLike = { name: string; value: string };
+
+function readSupabaseAuthCookieValue(all: CookieLike[]): string | null {
+  const cookies = all.filter(isSupabaseAuthCookieName);
   if (cookies.length === 0) return null;
 
   const unchunked = cookies.find(
@@ -80,6 +82,26 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   }
 }
 
+/** Access token + cached user from the Supabase session cookie (unverified). */
+export function readSupabaseSessionCookie(all: CookieLike[]): {
+  accessToken: string;
+  user: Record<string, unknown> | null;
+} | null {
+  const raw = readSupabaseAuthCookieValue(all);
+  if (!raw) return null;
+  const session = parseSupabaseSessionCookieValue(raw);
+  const accessToken = session?.access_token;
+  if (typeof accessToken !== "string" || accessToken.length === 0) return null;
+  const user = session?.user;
+  return {
+    accessToken,
+    user:
+      user && typeof user === "object"
+        ? (user as Record<string, unknown>)
+        : null,
+  };
+}
+
 function hasUsableRefreshToken(session: Record<string, unknown>): boolean {
   const refreshToken = session.refresh_token;
   return typeof refreshToken === "string" && refreshToken.length > 0;
@@ -93,11 +115,15 @@ function isAccessTokenExpired(payload: Record<string, unknown>): boolean {
 
 /** Skip Supabase /auth/v1/user when the browser cookie cannot succeed. */
 export function classifyAuthCookieState(request: NextRequest): AuthCookieState {
-  if (!hasSupabaseAuthCookie(request)) {
+  return classifyAuthCookies(request.cookies.getAll());
+}
+
+export function classifyAuthCookies(all: CookieLike[]): AuthCookieState {
+  if (!all.some(isSupabaseAuthCookieName)) {
     return "absent";
   }
 
-  const raw = getSupabaseAuthCookieValue(request);
+  const raw = readSupabaseAuthCookieValue(all);
   if (!raw) return "invalid";
 
   const session = parseSupabaseSessionCookieValue(raw);

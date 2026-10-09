@@ -11,6 +11,7 @@ import { Button, ButtonProps } from "@/components/ui/button";
 import BulkOrderGuardDialog from "./BulkOrderGuardDialog";
 import { isBulkOrderQuantity } from "../constants/bulkOrder";
 import useCartActions from "../hooks/useCartActions";
+import { loadSizePreview } from "@/features/products/size-preview-batch";
 
 interface AddToCartButtonProps extends ButtonProps {
   productId: string;
@@ -41,22 +42,14 @@ function AddToCartButton({
         disabled={disabled || isOutOfStock}
         onClick={async () => {
           if (isOutOfStock) return;
-          const sizeConfigRes = await fetch(
-            `/api/products/size-config?productId=${encodeURIComponent(productId)}`,
-            { cache: "no-store" },
-          );
-          if (sizeConfigRes.ok) {
-            const sizeConfig = (await sizeConfigRes.json()) as {
-              enabled?: boolean;
-            };
-            if (sizeConfig.enabled) {
-              toast({
-                title: "Select size first",
-                description:
-                  "This product has size options. Open product page and choose size before adding to cart.",
-              });
-              return;
-            }
+          const sizeConfig = await loadSizePreview(productId);
+          if (sizeConfig.enabled) {
+            toast({
+              title: "Select size first",
+              description:
+                "This product has size options. Open product page and choose size before adding to cart.",
+            });
+            return;
           }
           if (
             bulkOrder.enabled &&

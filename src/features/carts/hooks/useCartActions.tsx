@@ -28,6 +28,7 @@ function useCartActions(
     variables: {
       userId: user ? user.id : undefined,
     },
+    pause: !user,
   });
 
   const authAddOrUpdateProduct = async (
@@ -71,23 +72,21 @@ function useCartActions(
       }
       return { blockedBulk: false, added: false };
     }
+    // Optimistic: confirm instantly, then report if the save fails.
+    if (!opts.silent) toast({ title: "Success, Added a Product to the Cart." });
     try {
-      let res;
-      if (!existedProduct) {
-        res = await addToCart({
-          productId,
-          userId: user.id,
-          quantity,
-        });
-        refetch({ requestPolicy: "network-only" });
-      } else {
-        res = await updateCart({
-          productId,
-          userId: user.id,
-          newQuantity: existedProduct.node.quantity + quantity,
-        });
-        refetch({ requestPolicy: "network-only" });
-      }
+      const res = !existedProduct
+        ? await addToCart({
+            productId,
+            userId: user.id,
+            quantity,
+          })
+        : await updateCart({
+            productId,
+            userId: user.id,
+            newQuantity: existedProduct.node.quantity + quantity,
+          });
+      refetch({ requestPolicy: "network-only" });
       if (res?.error) {
         if (!opts.silent) {
           toast({
@@ -101,11 +100,15 @@ function useCartActions(
       if (size) {
         setProductSize(productId, size);
       }
-      if (!opts.silent)
-        toast({ title: "Success, Added a Product to the Cart." });
       return { blockedBulk: false, added: true };
     } catch {
-      if (!opts.silent) toast({ title: "Error, Unexpected Error occurred." });
+      if (!opts.silent) {
+        toast({
+          title: "Could not add to cart",
+          description: "Unexpected error occurred. Please try again.",
+          variant: "destructive",
+        });
+      }
       return { blockedBulk: false, added: false };
     }
   };

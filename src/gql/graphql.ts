@@ -2557,7 +2557,6 @@ export type ProductCardFragmentFragment = {
   __typename?: "products";
   id: string;
   name: string;
-  description?: string | null;
   rating: any;
   slug: string;
   badge?: string | null;
@@ -2628,7 +2627,6 @@ export type RecomendationProductsQueryQuery = {
         __typename?: "products";
         id: string;
         name: string;
-        description?: string | null;
         rating: any;
         slug: string;
         badge?: string | null;
@@ -2864,7 +2862,6 @@ export type SearchQuery = {
         __typename?: "products";
         id: string;
         name: string;
-        description?: string | null;
         rating: any;
         slug: string;
         badge?: string | null;
@@ -2916,7 +2913,6 @@ export type SearchWithPriceQuery = {
         __typename?: "products";
         id: string;
         name: string;
-        description?: string | null;
         rating: any;
         slug: string;
         badge?: string | null;
@@ -2967,7 +2963,6 @@ export type SearchInCollectionQuery = {
         __typename?: "products";
         id: string;
         name: string;
-        description?: string | null;
         rating: any;
         slug: string;
         badge?: string | null;
@@ -3020,7 +3015,6 @@ export type SearchInCollectionWithPriceQuery = {
         __typename?: "products";
         id: string;
         name: string;
-        description?: string | null;
         rating: any;
         slug: string;
         badge?: string | null;
@@ -3065,7 +3059,6 @@ export type FeaturedProductsQueryQuery = {
         __typename?: "products";
         id: string;
         name: string;
-        description?: string | null;
         rating: any;
         slug: string;
         badge?: string | null;
@@ -3200,7 +3193,6 @@ export type ProductDetailPageQueryQuery = {
         __typename?: "products";
         id: string;
         name: string;
-        description?: string | null;
         rating: any;
         slug: string;
         badge?: string | null;
@@ -3618,7 +3610,6 @@ export const ProductCardFragmentFragmentDoc = {
         selections: [
           { kind: "Field", name: { kind: "Name", value: "id" } },
           { kind: "Field", name: { kind: "Name", value: "name" } },
-          { kind: "Field", name: { kind: "Name", value: "description" } },
           { kind: "Field", name: { kind: "Name", value: "rating" } },
           { kind: "Field", name: { kind: "Name", value: "slug" } },
           { kind: "Field", name: { kind: "Name", value: "badge" } },
@@ -6136,7 +6127,6 @@ export const RecomendationProductsQueryDocument = {
         selections: [
           { kind: "Field", name: { kind: "Name", value: "id" } },
           { kind: "Field", name: { kind: "Name", value: "name" } },
-          { kind: "Field", name: { kind: "Name", value: "description" } },
           { kind: "Field", name: { kind: "Name", value: "rating" } },
           { kind: "Field", name: { kind: "Name", value: "slug" } },
           { kind: "Field", name: { kind: "Name", value: "badge" } },
@@ -7371,7 +7361,6 @@ export const SearchDocument = {
         selections: [
           { kind: "Field", name: { kind: "Name", value: "id" } },
           { kind: "Field", name: { kind: "Name", value: "name" } },
-          { kind: "Field", name: { kind: "Name", value: "description" } },
           { kind: "Field", name: { kind: "Name", value: "rating" } },
           { kind: "Field", name: { kind: "Name", value: "slug" } },
           { kind: "Field", name: { kind: "Name", value: "badge" } },
@@ -7789,7 +7778,6 @@ export const SearchWithPriceDocument = {
         selections: [
           { kind: "Field", name: { kind: "Name", value: "id" } },
           { kind: "Field", name: { kind: "Name", value: "name" } },
-          { kind: "Field", name: { kind: "Name", value: "description" } },
           { kind: "Field", name: { kind: "Name", value: "rating" } },
           { kind: "Field", name: { kind: "Name", value: "slug" } },
           { kind: "Field", name: { kind: "Name", value: "badge" } },
@@ -8200,7 +8188,6 @@ export const SearchInCollectionDocument = {
         selections: [
           { kind: "Field", name: { kind: "Name", value: "id" } },
           { kind: "Field", name: { kind: "Name", value: "name" } },
-          { kind: "Field", name: { kind: "Name", value: "description" } },
           { kind: "Field", name: { kind: "Name", value: "rating" } },
           { kind: "Field", name: { kind: "Name", value: "slug" } },
           { kind: "Field", name: { kind: "Name", value: "badge" } },
@@ -8663,7 +8650,6 @@ export const SearchInCollectionWithPriceDocument = {
         selections: [
           { kind: "Field", name: { kind: "Name", value: "id" } },
           { kind: "Field", name: { kind: "Name", value: "name" } },
-          { kind: "Field", name: { kind: "Name", value: "description" } },
           { kind: "Field", name: { kind: "Name", value: "rating" } },
           { kind: "Field", name: { kind: "Name", value: "slug" } },
           { kind: "Field", name: { kind: "Name", value: "badge" } },
@@ -8873,7 +8859,6 @@ export const FeaturedProductsQueryDocument = {
         selections: [
           { kind: "Field", name: { kind: "Name", value: "id" } },
           { kind: "Field", name: { kind: "Name", value: "name" } },
-          { kind: "Field", name: { kind: "Name", value: "description" } },
           { kind: "Field", name: { kind: "Name", value: "rating" } },
           { kind: "Field", name: { kind: "Name", value: "slug" } },
           { kind: "Field", name: { kind: "Name", value: "badge" } },
@@ -9562,7 +9547,6 @@ export const ProductDetailPageQueryDocument = {
         selections: [
           { kind: "Field", name: { kind: "Name", value: "id" } },
           { kind: "Field", name: { kind: "Name", value: "name" } },
-          { kind: "Field", name: { kind: "Name", value: "description" } },
           { kind: "Field", name: { kind: "Name", value: "rating" } },
           { kind: "Field", name: { kind: "Name", value: "slug" } },
           { kind: "Field", name: { kind: "Name", value: "badge" } },
