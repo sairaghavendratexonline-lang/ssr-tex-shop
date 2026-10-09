@@ -12,7 +12,10 @@ if (!connectionString) {
 }
 
 /** Serverless: one connection per instance; transaction pooler (6543) handles concurrency. */
-const isServerless = process.env.VERCEL === "1";
+const isServerless =
+  process.env.VERCEL === "1" ||
+  process.env.NETLIFY === "true" ||
+  Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME);
 
 const client = postgres(
   connectionString,
