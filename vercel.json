@@ -3,12 +3,6 @@
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "installCommand": "npm install",
-  "crons": [
-    {
-      "path": "/api/cron/release-expired-stock-reservations",
-      "schedule": "15 * * * *"
-    }
-  ],
   "headers": [
     {
       "source": "/_next/static/(.*)",

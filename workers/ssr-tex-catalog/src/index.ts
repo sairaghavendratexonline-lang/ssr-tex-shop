@@ -15,6 +15,25 @@ export interface Env {
   CATALOG_SYNC_SECRET: string;
   SUPABASE_URL: string;
   SUPABASE_ANON_KEY: string;
+  /** App origin for cron routes (Vercel Hobby only allows daily crons). */
+  APP_CRON_BASE_URL?: string;
+  CRON_SECRET?: string;
+}
+
+async function callAppCron(env: Env, path: string): Promise<void> {
+  const base = (env.APP_CRON_BASE_URL || "").trim().replace(/\/+$/, "");
+  const secret = (env.CRON_SECRET || "").trim();
+  if (!base || !secret) return;
+  try {
+    const res = await fetch(`${base}${path}`, {
+      headers: { Authorization: `Bearer ${secret}` },
+    });
+    if (!res.ok) {
+      console.error(`[ssr-tex-catalog] app cron ${path} -> ${res.status}`);
+    }
+  } catch (error) {
+    console.error(`[ssr-tex-catalog] app cron ${path} failed:`, error);
+  }
 }
 
 type D1Database = {
@@ -625,7 +644,7 @@ export default {
   },
 
   async scheduled(
-    _event: unknown,
+    event: { scheduledTime?: number },
     env: Env,
     ctx: { waitUntil: (promise: Promise<unknown>) => void },
   ): Promise<void> {
@@ -634,5 +653,11 @@ export default {
         console.error("[ssr-tex-catalog] cron sync failed:", error);
       }),
     );
+
+    const minute = new Date(event.scheduledTime ?? Date.now()).getUTCMinutes();
+    ctx.waitUntil(callAppCron(env, "/api/cron/release-expired-stock-reservations"));
+    if (minute >= 30) {
+      ctx.waitUntil(callAppCron(env, "/api/cron/lifecycle-cleanup"));
+    }
   },
 };
