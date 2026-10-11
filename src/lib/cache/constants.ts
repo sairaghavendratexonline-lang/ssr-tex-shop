@@ -30,3 +30,7 @@ export const productDetailCacheTag = (slug: string) =>
 
 export const productSizeCacheTag = (productId: string) =>
   `storefront-size:${productId}`;
+
+/** Redis key for the PDP price snapshot (display only; checkout reads live). */
+export const productSnapshotCacheKey = (productId: string) =>
+  `sf:snapshot:${productId}`;

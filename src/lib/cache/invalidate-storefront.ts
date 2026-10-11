@@ -12,6 +12,7 @@ import {
   CACHE_TAGS,
   productDetailCacheTag,
   productSizeCacheTag,
+  productSnapshotCacheKey,
 } from "./constants";
 import { redisDelByPrefix } from "./redis";
 import {
@@ -33,6 +34,8 @@ const REDIS_PREFIXES = [
   "sf:recommendations:",
   "sf:shop-by-price",
   "sf:pincode:",
+  "sf:snapshot:",
+  "sf:sitemap:",
 ] as const;
 
 /** Narrow prefixes for category create/update/delete (avoids full KEYS scans). */
@@ -41,6 +44,7 @@ const COLLECTION_REDIS_PREFIXES = [
   "sf:collections:",
   "sf:landing",
   "sf:products:",
+  "sf:sitemap:",
 ] as const;
 
 /** Shared caches that list several products; any product change can alter them. */
@@ -52,6 +56,7 @@ const PRODUCT_LIST_PREFIXES = [
   "sf:landing",
   "sf:recommendations:",
   "sf:shop-by-price",
+  "sf:sitemap:",
 ] as const;
 
 const SIZE_BATCH_PREFIX = "sf:size:batch:";
@@ -155,7 +160,7 @@ export async function invalidateProductCaches(params: {
 
   const keys = [
     ...slugs.flatMap((slug) => [`sf:product:${slug}`, `sf:published:${slug}`]),
-    ...ids.map((id) => `sf:size:${id}`),
+    ...ids.flatMap((id) => [`sf:size:${id}`, productSnapshotCacheKey(id)]),
   ];
   const prefixes: string[] = [SIZE_BATCH_PREFIX];
   if (lists) prefixes.push(...PRODUCT_LIST_PREFIXES);

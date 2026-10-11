@@ -73,6 +73,8 @@ describe("invalidateStorefrontCache", () => {
     );
     expect(prefixes).toContain("sf:collection:");
     expect(prefixes).toContain("sf:collections:");
+    expect(prefixes).toContain("sf:snapshot:");
+    expect(prefixes).toContain("sf:sitemap:");
   });
 
   it("revalidates the per-product group tags too", async () => {
@@ -102,11 +104,13 @@ describe("invalidateProductCaches", () => {
         "sf:product:red-saree",
         "sf:published:red-saree",
         "sf:size:p1",
+        "sf:snapshot:p1",
       ]),
     );
     expect(prefixes).toEqual(
       expect.arrayContaining([
         "sf:products:",
+        "sf:sitemap:",
         "sf:collection:",
         "sf:size:batch:",
       ]),

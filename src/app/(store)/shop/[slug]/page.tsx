@@ -27,7 +27,7 @@ import {
 } from "@/features/products/components/ProductPriceDisplay";
 import { getEffectiveProductPrice } from "@/lib/products/discount";
 import { toProductDiscountFields } from "@/lib/products/pricing";
-import { getCartProductPricingByIds } from "@/lib/storefront/cart-pricing";
+import { getProductStorefrontSnapshot } from "@/lib/storefront/product-storefront-snapshot";
 import { keytoUrl } from "@/lib/utils";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { Metadata } from "next";
@@ -82,11 +82,13 @@ async function ProductDetailPage({ params }: Props) {
     featuredImage,
   } = productEdge.node;
   const productSlug = params.slug;
-  const [sizeConfig, livePricing] = await Promise.all([
-    getProductSizeConfig(id),
-    withFallback("pdp:pricing", () => getCartProductPricingByIds([id]), {}),
-  ]);
-  const resolvedPricing = livePricing[id];
+  // Sequential: serverless db client has max 1 connection; parallel reads queue on the pooler.
+  const sizeConfig = await getProductSizeConfig(id);
+  const resolvedPricing = await withFallback(
+    "pdp:pricing",
+    () => getProductStorefrontSnapshot(id),
+    null,
+  );
   const pricingProduct = resolvedPricing
     ? toProductDiscountFields(resolvedPricing)
     : productEdge.node;
