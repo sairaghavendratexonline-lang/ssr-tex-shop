@@ -1,5 +1,5 @@
 /**
- * SSR Tex shop hostname on Cloudflare → Netlify origin.
+ * SSR Tex shop hostname on Cloudflare → Vercel origin.
  *
  * Edge cache:
  * - Cache public catalog HTML + public storefront APIs (short TTL)
@@ -9,7 +9,8 @@
  *
  * X-SSR-Cache: HIT | MISS | BYPASS
  */
-const ORIGIN = "https://ssrtex.netlify.app";
+/** Fallback origin if Vercel is paused: https://ssrtex.netlify.app */
+const ORIGIN = "https://ssr-tex-shop-ten.vercel.app";
 const APEX = "sairaghavendratex.com";
 const WWW = "www.sairaghavendratex.com";
 
