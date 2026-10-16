@@ -121,6 +121,15 @@ const nextConfig = {
   },
   experimental: {
     serverComponentsExternalPackages: ["@aws-sdk/client-s3", "sharp"],
+    // Allow Server Actions from the public shop hosts and the Vercel
+    // production alias (Cloudflare edge sets X-Forwarded-Host to www).
+    serverActions: {
+      allowedOrigins: [
+        "sairaghavendratex.com",
+        "www.sairaghavendratex.com",
+        "ssr-tex-shop-ten.vercel.app",
+      ],
+    },
     // Always refetch dynamic routes (e.g. admin dashboard) when navigating
     // back to them, instead of replaying the stale client Router Cache.
     staleTimes: {
